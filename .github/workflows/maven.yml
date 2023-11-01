@@ -1,0 +1,106 @@
+# This workflow will build a Java project with Maven, and cache/restore any dependencies to improve the workflow execution time
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-java-with-maven
+
+# This workflow uses actions that are not certified by GitHub.
+# They are provided by a third-party and are governed by
+# separate terms of service, privacy policy, and support
+# documentation.
+name: Java CI with Maven
+
+on:
+  push:
+    branches: [ "main" ]
+
+
+jobs:
+
+  # Build Job
+  build:
+    runs-on: self-hosted
+    steps:
+    - name: Check if JDK 11 is set up
+      id: check-jdk
+      run: |
+        if java -version 2>&1 | grep -q "11"; then
+          echo "::set-output name=setup-needed::false"
+        else
+          echo "::set-output name=setup-needed::true"
+        fi
+
+    - name: Set up JDK 11
+      if: steps.check-jdk.outputs.setup-needed == 'true'
+      uses: actions/setup-java@v2
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        cache: maven
+        
+    - name: Build with Maven
+      run: mvn -B package --file s3/pom.xml
+
+  
+  # Deploy Job
+  deploy:
+    needs: build
+    runs-on: self-hosted
+    steps:
+    - name: Kill previous instance if exists
+      run: |
+        sudo kill -9 $(sudo lsof -t -i:8080) || true
+        # set -euxo pipefail  # This makes the script verbose and fail on the first error
+        
+        # PIDS=$(pgrep java || true)  # Use || true to avoid the script from failing when pgrep returns no PIDs
+        
+        # # Loop over each PID to handle them separately
+        # for PID in $PIDS; do
+        #   echo "Java process found with PID $PID. Attempting to terminate..."
+      
+        #   # Graceful shutdown with a 10-second timeout
+        #   sudo kill $PID || (echo "Error trying to gracefully terminate Java process with PID $PID" && exit 1)
+        #   sleep 10
+      
+        #   # Check if the process is still running, and force kill if necessary
+        #   if ps -p $PID > /dev/null; then
+        #     echo "Java process with PID $PID did not terminate gracefully. Force killing..."
+        #     sudo kill -9 $PID || (echo "Error force killing Java process with PID $PID" && exit 1)
+        #   fi
+        # done
+  
+        # # If no PIDs were found
+        # if [[ -z "$PIDS" ]]; then
+        #   echo "No Java process found running."
+        # fi
+    - name: Execute Jar File
+      run: |
+        sudo java -jar /home/ubuntu/actions-runner/_work/storage-s3/storage-s3/s3/target/s3-0.0.1-SNAPSHOT.jar > app_log.txt 2>&1 &
+        sleep 10
+        tail -n 50 app_log.txt
+
+  
+  # Test Job
+  test:
+    needs: deploy
+    runs-on: self-hosted
+    steps:
+    - name: Test Service
+      run: |
+        response=$(curl -sSI http://localhost:8080)
+  
+        # Check the HTTP response code
+        http_status=$(echo "$response" | head -n 1 | cut -d ' ' -f 2)
+  
+        if [ "$http_status" = "200" ]; then
+          echo "Service is running and responded with HTTP 200 OK"
+        else
+          echo "Service did not respond with HTTP 200 OK"
+          exit 1
+        fi
+
+
+
+# Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
+# - name: Update dependency graph
+#   uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
+
+    # - name: Update dependency graph
+    #   uses: advanced-security/maven-dependency-submission-action@571e99aab1055c2e71a1e2309b9691de18d6b7d6
