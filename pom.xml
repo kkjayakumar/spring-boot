@@ -28,6 +28,11 @@
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
+	<!-- https://mvnrepository.com/artifact/org.apache.maven.plugins/maven-compiler-plugin -->
+<dependency>
+    <groupId>org.apache.maven.plugins</groupId>
+    <artifactId>maven-compiler-plugin</artifactId>
+</dependency>
 
 	<build>
 		<plugins>
