@@ -17,7 +17,7 @@ jobs:
   Build Job
   build:
     runs-on: self-hosted
-   steps:
+    steps:
   #  - name: Check if JDK 11 is set up
   #    id: check-jdk
   #    run: |
