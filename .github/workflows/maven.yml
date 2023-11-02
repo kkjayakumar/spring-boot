@@ -15,17 +15,17 @@ on:
 jobs:
 
   # Build Job
-  build:
-    runs-on: self-hosted
-    steps:
-    - name: Check if JDK 11 is set up
-      id: check-jdk
-      run: |
-        if java -version 2>&1 | grep -q "11"; then
-          echo "::set-output name=setup-needed::false"
-        else
-          echo "::set-output name=setup-needed::true"
-        fi
+ # build:
+  #  runs-on: self-hosted
+  #  steps:
+  #  - name: Check if JDK 11 is set up
+  #    id: check-jdk
+  #    run: |
+  #      if java -version 2>&1 | grep -q "11"; then
+  #        echo "::set-output name=setup-needed::false"
+  #      else
+  #        echo "::set-output name=setup-needed::true"
+  #      fi
 
     - name: Set up JDK 11
       if: steps.check-jdk.outputs.setup-needed == 'true'
